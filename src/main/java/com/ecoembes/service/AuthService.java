@@ -5,8 +5,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.ecoembes.domain.Employee;
-import com.ecoembes.dto.LoginRequest;
-import com.ecoembes.dto.LoginResponse;
+import com.ecoembes.dto.LoginRequestDTO;
+import com.ecoembes.dto.LoginResponseDTO;
 
 @Service
 public class AuthService {
@@ -21,7 +21,7 @@ public class AuthService {
     }
 
     // Login
-    public LoginResponse login(LoginRequest request) {
+    public LoginResponseDTO login(LoginRequestDTO request) {
 
         // Comprobar las credenciales del empleado
         Employee employee = employeeService.authenticate(
@@ -41,7 +41,7 @@ public class AuthService {
         sessionService.createSession(token, employee);
 
         // Devolver el token al cliente
-        return new LoginResponse(token);
+        return new LoginResponseDTO(token);
     }
 
     // Logout

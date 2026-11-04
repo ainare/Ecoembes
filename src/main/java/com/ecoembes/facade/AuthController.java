@@ -4,8 +4,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import com.ecoembes.dto.LoginRequest;
-import com.ecoembes.dto.LoginResponse;
+import com.ecoembes.dto.LoginRequestDTO;
+import com.ecoembes.dto.LoginResponseDTO;
 import com.ecoembes.service.AuthService;
 
 import jakarta.validation.Valid;
@@ -21,10 +21,10 @@ public class AuthController {
 
     // POST /login
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(
-            @Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<LoginResponseDTO> login(
+            @Valid @RequestBody LoginRequestDTO request) {
 
-        LoginResponse response = authService.login(request);
+        LoginResponseDTO response = authService.login(request);
 
         return ResponseEntity.ok(response);
     }
