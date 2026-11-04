@@ -34,7 +34,12 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
     // No comprobar el token en el endpoint de login
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return LOGIN_PATH.equals(request.getServletPath());
+        String path = request.getServletPath();
+
+        return LOGIN_PATH.equals(path)
+                || path.startsWith("/swagger-ui")
+                || path.equals("/v3/api-docs")
+                || path.startsWith("/v3/api-docs/");
     }
 
     // Comprobar la autenticación del resto de peticiones
