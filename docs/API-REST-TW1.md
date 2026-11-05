@@ -61,17 +61,7 @@ Cuando un empleado cierre sesión, el servidor eliminará el token y la informac
 | 409 Conflict | La operación genera un conflicto con el estado actual del sistema. |
 | 500 Internal Server Error | Se ha producido un error interno en el servidor. |
 
-Las respuestas de error tendrán un formato común:
-
-```json
-{
-  "timestamp": "2026-11-09T09:30:00",
-  "status": 401,
-  "error": "Unauthorized",
-  "code": "INVALID_TOKEN",
-  "message": "The authentication token is invalid."
-}
-```
+Las respuestas de error utilizarán el formato proporcionado por Spring Boot, manteniendo los códigos HTTP correspondientes a cada situación.
 
 # 3. Resumen de operaciones de la API
 
