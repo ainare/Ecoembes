@@ -22,10 +22,13 @@ import com.ecoembes.dto.UpdateDumpsterResponseDTO;
 import com.ecoembes.service.DumpsterAppService;
 import com.ecoembes.dto.DumpsterStatusDTO;
 
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+
 import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/dumpsters")
+@SecurityRequirement(name = "bearerAuth")
 public class DumpsterController {
 
 	private final DumpsterAppService dumpsterAppService;
@@ -51,7 +54,7 @@ public class DumpsterController {
 	 */
 	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Dumpster reading updated successfully")
 	@PutMapping("/{id}")
-	public ResponseEntity<UpdateDumpsterResponseDTO> updateDumpster(@PathVariable String id,
+	public ResponseEntity<UpdateDumpsterResponseDTO> updateDumpster(@PathVariable("id") String id,
 			@Valid @RequestBody UpdateDumpsterDTO request) {
 
 		UpdateDumpsterResponseDTO updated = dumpsterAppService.updateDumpster(id, request);
@@ -60,9 +63,9 @@ public class DumpsterController {
 	}
 
 	@GetMapping("/{id}/usage")
-	public ResponseEntity<DumpsterUsageDTO> getDumpsterUsage(@PathVariable String id,
-			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+	public ResponseEntity<DumpsterUsageDTO> getDumpsterUsage(@PathVariable("id") String id,
+			@RequestParam("startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+			@RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
 
 		DumpsterUsageDTO result = dumpsterAppService.getDumpsterUsage(id, startDate, endDate);
 
@@ -70,8 +73,8 @@ public class DumpsterController {
 	}
 
 	@GetMapping("/status")
-	public ResponseEntity<DumpsterStatusDTO> getDumpstersStatus(@RequestParam String postalCode,
-			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+	public ResponseEntity<DumpsterStatusDTO> getDumpstersStatus(@RequestParam("postalCode") String postalCode,
+			@RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
 
 		DumpsterStatusDTO result = dumpsterAppService.getDumpstersStatus(postalCode, date);
 
