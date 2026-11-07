@@ -13,6 +13,7 @@ import com.ecoembes.domain.Employee;
 import com.ecoembes.dto.AssignmentDTO;
 import com.ecoembes.dto.CreateAssignmentDTO;
 import com.ecoembes.service.AssignmentAppService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
 import jakarta.validation.Valid;
 
@@ -23,8 +24,10 @@ import jakarta.validation.Valid;
         description = "Operaciones para asignar contenedores a las plantas"
 )
 
+@SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequestMapping("/assignments")
+
 public class AssignmentController {
 
     private final AssignmentAppService assignmentAppService;

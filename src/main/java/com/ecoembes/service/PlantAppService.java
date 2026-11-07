@@ -15,8 +15,10 @@ import com.ecoembes.dto.PlantCapacityDTO;
 
 @Service
 public class PlantAppService {
-
+	private static final double EPSILON = 1e-9;
     private final Map<String, Plant> plants = new ConcurrentHashMap<>();
+ // Toneladas ya reservadas por planta y fecha.
+    private final Map<String, Map<LocalDate, Double>> reservedTons = new HashMap<>();
 
     public PlantAppService() {
 
@@ -46,28 +48,66 @@ public class PlantAppService {
         return capacities;
     }
 
-    public Double getAvailableCapacity(String plantId, LocalDate date) {
 
-        Plant plant = plants.get(plantId);
+    public synchronized Double getAvailableCapacity(
+        String plantId, LocalDate date) {
 
-        if (plant == null) {
-            throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND,
-                    "Plant not found"
-            );
-        }
-
-        Double capacity = plant.getAvailableCapacity(date);
-
-        if (capacity == null) {
-            throw new ResponseStatusException(
-                    HttpStatus.NOT_FOUND,
-                    "Capacity information not found for this date"
-            );
-        }
-
-        return capacity;
+    if (plantId == null || plantId.isBlank() || date == null) {
+        throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Plant ID and date are required"
+        );
     }
+
+    Plant plant = plants.get(plantId);
+
+    if (plant == null) {
+        throw new ResponseStatusException(
+                HttpStatus.NOT_FOUND,
+                "Plant not found"
+        );
+    }
+
+    Double initialCapacity = plant.getAvailableCapacity(date);
+
+    if (initialCapacity == null) {
+        throw new ResponseStatusException(
+                HttpStatus.NOT_FOUND,
+                "Capacity information not found for this date"
+        );
+    }
+
+    double alreadyReserved = reservedTons
+            .getOrDefault(plantId, Map.of())
+            .getOrDefault(date, 0.0);
+
+    return Math.max(0.0, initialCapacity - alreadyReserved);
+}
+
+	public synchronized void reserveCapacity(
+        String plantId, LocalDate date, double requiredTons) {
+
+    if (!Double.isFinite(requiredTons) || requiredTons < 0) {
+        throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Invalid weight in tons"
+        );
+    }
+
+    double available = getAvailableCapacity(plantId, date);
+
+    if (requiredTons > available + EPSILON) {
+        throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "Insufficient recycling plant capacity"
+        );
+    }
+
+    reservedTons
+            .computeIfAbsent(plantId, key -> new HashMap<>())
+            .merge(date, requiredTons, Double::sum);
+}
+
     
     public PlantCapacityDTO getPlantCapacity(String plantId, LocalDate date) {
 

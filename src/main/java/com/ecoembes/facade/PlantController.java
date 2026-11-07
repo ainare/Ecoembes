@@ -10,16 +10,24 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 import com.ecoembes.dto.PlantCapacityDTO;
 import com.ecoembes.service.PlantAppService;
 
-@io.swagger.v3.oas.annotations.tags.Tag(
-        name = "Plants",
-        description = "Operaciones relacionadas con las plantas de reciclaje"
+@SecurityScheme(
+        name = "bearerAuth",
+        type = SecuritySchemeType.HTTP,
+        scheme = "bearer"
 )
+@SecurityRequirement(name = "bearerAuth")
+@Tag(name = "Plants", description = "Operaciones relacionadas con las plantas de reciclaje")
 @RestController
 @RequestMapping("/plants")
+
 public class PlantController {
 
     private final PlantAppService plantAppService;
@@ -37,6 +45,11 @@ public class PlantController {
                 responseCode = "200",
                 description = "Capacidad consultada correctamente"
         ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "400",
+                description = "Fecha o parametros incorrectos"
+        ),
+        
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
                 responseCode = "401",
                 description = "Empleado no autenticado"
