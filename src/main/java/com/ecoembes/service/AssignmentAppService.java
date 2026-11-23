@@ -2,177 +2,119 @@ package com.ecoembes.service;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.Collections;
-import java.util.HashMap;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.ecoembes.dto.AssignmentDTO;
-import com.ecoembes.dto.CreateAssignmentDTO;
-import com.ecoembes.dto.DumpsterReadingDTO;
+import com.ecoembes.domain.Assignment;
+import com.ecoembes.domain.Dumpster;
+import com.ecoembes.domain.DumpsterReading;
+import com.ecoembes.domain.Employee;
+import com.ecoembes.domain.Plant;
 
 @Service
 public class AssignmentAppService {
-	// Peso estimado de cada envase: 50 gramos.
-	private static final double KG_PER_PACKAGE = 0.05;
 
-	// Una tonelada equivale a 1000 kg.
-	private static final double KG_PER_TON = 1000.0;
+    // Peso estimado de cada envase: 50 gramos.
+    private static final double KG_PER_PACKAGE = 0.05;
+    private static final double KG_PER_TON = 1000.0;
+
     private final DumpsterAppService dumpsterAppService;
     private final PlantAppService plantAppService;
-
-    private final Map<String, AssignmentDTO> assignments =
-            new ConcurrentHashMap<>();
-    
-    private final Map<LocalDate, Set<String>> assignedDumpstersByDate =
-            new HashMap<>();
-
-    private final AtomicInteger nextAssignmentId =
-            new AtomicInteger(1);
+    private final Map<String, Assignment> assignments = new HashMap<>();
+    private final Map<LocalDate, Set<String>> assignedDumpstersByDate = new HashMap<>();
+    private int nextAssignmentId = 1;
 
     public AssignmentAppService(
-            DumpsterAppService dumpsterAppService,
-            PlantAppService plantAppService) {
-
+            DumpsterAppService dumpsterAppService, PlantAppService plantAppService) {
         this.dumpsterAppService = dumpsterAppService;
         this.plantAppService = plantAppService;
     }
 
-    public synchronized AssignmentDTO createAssignment(
-            CreateAssignmentDTO request, String employeeId) {
-
-        if (request == null || request.getPlantId() == null
-                || request.getPlantId().isBlank()
-                || request.getDate() == null
-                || request.getDumpsterIds() == null
-                || request.getDumpsterIds().isEmpty()) {
-
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Invalid assignment data"
-            );
+    public synchronized Assignment assignDumpsters(
+            String plantId, LocalDate date, List<String> dumpsterIds, Employee employee) {
+        if (plantId == null || plantId.isBlank() || date == null
+                || dumpsterIds == null || dumpsterIds.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid assignment data");
         }
 
-        if (employeeId == null || employeeId.isBlank()) {
-            throw new ResponseStatusException(
-                    HttpStatus.UNAUTHORIZED,
-                    "Employee not authenticated"
-            );
+        if (employee == null || employee.getEmployeeId() == null
+                || employee.getEmployeeId().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Employee not authenticated");
         }
 
-        String plantId = request.getPlantId().trim();
-        LocalDate date = request.getDate();
+        Plant plant = plantAppService.findPlant(plantId.trim());
+        plantAppService.getCapacity(plant.getId(), date);
 
-        // Check that the plant and its capacity exist for this date.
-        plantAppService.getAvailableCapacity(plantId, date);
+        Set<String> uniqueIds = new LinkedHashSet<>();
+        for (String id : dumpsterIds) {
+            String normalizedId = id == null ? "" : id.trim();
+            if (normalizedId.isEmpty() || !uniqueIds.add(normalizedId)) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "Invalid or repeated dumpster ID"
+                );
+            }
+        }
 
-        List<String> dumpsterIds = new ArrayList<>();
-        Set<String> uniqueIds = new HashSet<>();
-        Set<String> previouslyAssigned = assignedDumpstersByDate.getOrDefault(date, Collections.emptySet());
-
+        Set<String> previouslyAssigned = assignedDumpstersByDate.getOrDefault(date, Set.of());
+        List<Dumpster> dumpsters = new ArrayList<>();
         int totalPackagingContainers = 0;
 
-        for (String id : request.getDumpsterIds()) {
-
-            String dumpsterId = id == null ? "" : id.trim();
-
-            if (dumpsterId.isEmpty() || !uniqueIds.add(dumpsterId)) {
-                throw new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST,
-                        "Invalid or repeated dumpster ID"
-                );
-            }
-            
+        for (String dumpsterId : uniqueIds) {
             if (previouslyAssigned.contains(dumpsterId)) {
                 throw new ResponseStatusException(
-                        HttpStatus.CONFLICT,
-                        "Dumpster already assigned for this date: " + dumpsterId
+                        HttpStatus.CONFLICT, "Dumpster already assigned for this date: " + dumpsterId
                 );
             }
 
-            // Check that the dumpster exists.
-            if (dumpsterAppService.findDumpsterById(dumpsterId).isEmpty()) {
-                throw new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Dumpster " + dumpsterId + " not found"
-                );
-            }
+            Dumpster dumpster = dumpsterAppService.findDumpsterById(dumpsterId)
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND, "Dumpster " + dumpsterId + " not found"
+                    ));
 
-            // Get the sensor reading for the selected date.
-            DumpsterReadingDTO reading =
-                    dumpsterAppService.findReading(
-                            dumpsterId, request.getDate()
-                    ).orElseThrow(() ->
-                            new ResponseStatusException(
-                                    HttpStatus.NOT_FOUND,
-                                    "Reading not found for dumpster "
-                                            + dumpsterId
-                            )
-                    );
+            DumpsterReading reading = dumpster.findReading(date)
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND, "Reading not found for dumpster " + dumpsterId
+                    ));
 
-            int estimated = reading.getEstimatedContainers();
-
+            int estimated = reading.estimatedContainers();
             if (estimated < 0) {
-                throw new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST,
-                        "Negative packaging count"
-                );
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Negative packaging count");
             }
 
             try {
-                totalPackagingContainers = Math.addExact(
-                        totalPackagingContainers, estimated
-                );
+                totalPackagingContainers = Math.addExact(totalPackagingContainers, estimated);
             } catch (ArithmeticException ex) {
                 throw new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST,
-                        "Total packaging count is too large"
+                        HttpStatus.BAD_REQUEST, "Total packaging count is too large"
                 );
             }
 
-            dumpsterIds.add(dumpsterId);
+            dumpsters.add(dumpster);
         }
 
-        // TODO: Check available capacity in tons once the
-        // conversion from packaging containers to tons is agreed.
-     // Convertir el total de envases a toneladas.
-        double requiredTons = totalPackagingContainers
-                * KG_PER_PACKAGE / KG_PER_TON;
+        double requiredTons = totalPackagingContainers * KG_PER_PACKAGE / KG_PER_TON;
+        plantAppService.reserveCapacity(plant.getId(), date, requiredTons);
 
-        // Comprobar y reservar la capacidad de la planta.
-        plantAppService.reserveCapacity(plantId, date, requiredTons);
-        
-        String assignmentId = String.format(
-                "AS-%03d", nextAssignmentId.getAndIncrement()
-        );
-
-        AssignmentDTO assignment = new AssignmentDTO(
-                assignmentId,
-                plantId,
-                request.getDate(),
-                List.copyOf(dumpsterIds),
-                dumpsterIds.size(),
-                totalPackagingContainers,
-                employeeId
+        String assignmentId = String.format("AS-%03d", nextAssignmentId++);
+        Assignment assignment = new Assignment(
+                assignmentId, plant, employee, date, dumpsters, totalPackagingContainers
         );
 
         assignments.put(assignmentId, assignment);
-        assignedDumpstersByDate.computeIfAbsent(date, key -> new HashSet<>()).addAll(dumpsterIds);
+        assignedDumpstersByDate.computeIfAbsent(date, key -> new HashSet<>()).addAll(uniqueIds);
 
-        // Simulate notification to the recycling plant.
         System.out.println(
-                "Notification to plant " + plantId
-                + ": " + assignment.getTotalDumpsters()
-                + " dumpsters and "
-                + assignment.getTotalPackagingContainers()
+                "Notification to plant " + plant.getId()
+                + ": " + assignment.totalDumpsters()
+                + " dumpsters and " + assignment.totalPackagingContainers()
                 + " packaging containers."
         );
 

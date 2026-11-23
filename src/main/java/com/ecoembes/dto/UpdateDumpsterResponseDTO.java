@@ -1,5 +1,7 @@
 package com.ecoembes.dto;
 
+import com.ecoembes.domain.FillLevel;
+
 import java.time.LocalDate;
 
 /** Response body for PUT /dumpsters/{id}, matching the agreed API example. */
@@ -53,3 +55,4 @@ public class UpdateDumpsterResponseDTO {
         this.fillLevel = fillLevel;
     }
 }
+

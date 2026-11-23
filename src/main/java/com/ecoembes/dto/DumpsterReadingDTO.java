@@ -1,5 +1,7 @@
 package com.ecoembes.dto;
 
+import com.ecoembes.domain.FillLevel;
+
 import java.time.LocalDate;
 
 /** A single historical sensor reading, as used in usage-query responses. */
@@ -43,3 +45,4 @@ public class DumpsterReadingDTO {
         this.fillLevel = fillLevel;
     }
 }
+

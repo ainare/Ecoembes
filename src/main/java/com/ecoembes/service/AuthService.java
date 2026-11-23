@@ -5,8 +5,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.ecoembes.domain.Employee;
-import com.ecoembes.dto.LoginRequestDTO;
-import com.ecoembes.dto.LoginResponseDTO;
 
 @Service
 public class AuthService {
@@ -21,27 +19,15 @@ public class AuthService {
     }
 
     // Login
-    public LoginResponseDTO login(LoginRequestDTO request) {
+    public String login(String email, String password) {
+        Employee employee = employeeService.authenticate(email, password)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED, "Invalid email or password"
+                ));
 
-        // Comprobar las credenciales del empleado
-        Employee employee = employeeService.authenticate(
-                request.getEmail(),
-                request.getPassword()
-        ).orElseThrow(() ->
-                new ResponseStatusException(
-                        HttpStatus.UNAUTHORIZED,
-                        "Invalid email or password"
-                )
-        );
-
-        // Generar el token utilizando el timestamp actual
         String token = String.valueOf(System.currentTimeMillis());
-
-        // Guardar la sesión del empleado
         sessionService.createSession(token, employee);
-
-        // Devolver el token al cliente
-        return new LoginResponseDTO(token);
+        return token;
     }
 
     // Logout

@@ -1,6 +1,8 @@
 
 package com.ecoembes.dto;
 
+import com.ecoembes.domain.FillLevel;
+
 import java.time.LocalDate;
 import java.util.List;
 
@@ -78,3 +80,4 @@ public class DumpsterStatusDTO {
         }
     }
 }
+

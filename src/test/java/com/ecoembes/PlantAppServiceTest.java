@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.ecoembes.dto.PlantCapacityDTO;
+import com.ecoembes.facade.PlantController;
 import com.ecoembes.service.PlantAppService;
 
 class PlantAppServiceTest {
@@ -22,7 +23,7 @@ class PlantAppServiceTest {
         LocalDate today = LocalDate.now();
 
         Double capacity =
-                plantAppService.getAvailableCapacity("PL-01", today);
+                plantAppService.getCapacity("PL-01", today);
 
         assertEquals(25.5, capacity, 0.001);
     }
@@ -33,7 +34,7 @@ class PlantAppServiceTest {
         LocalDate today = LocalDate.now();
 
         PlantCapacityDTO result =
-                plantAppService.getPlantCapacity("PL-01", today);
+                new PlantController(plantAppService).getCapacity("PL-01", today).getBody();
 
         assertEquals("PL-01", result.getPlantId());
         assertEquals(today, result.getDate());
@@ -47,7 +48,7 @@ class PlantAppServiceTest {
 
         ResponseStatusException error = assertThrows(
                 ResponseStatusException.class,
-                () -> plantAppService.getAvailableCapacity("PL-99", today)
+                () -> plantAppService.getCapacity("PL-99", today)
         );
 
         assertEquals(404, error.getStatusCode().value());
@@ -60,7 +61,7 @@ class PlantAppServiceTest {
 
         ResponseStatusException error = assertThrows(
                 ResponseStatusException.class,
-                () -> plantAppService.getAvailableCapacity("PL-01", date)
+                () -> plantAppService.getCapacity("PL-01", date)
         );
 
         assertEquals(404, error.getStatusCode().value());
@@ -71,9 +72,9 @@ class PlantAppServiceTest {
         LocalDate date = LocalDate.now().plusDays(10);
 
         Double capacity =
-                plantAppService.getAvailableCapacity("PL-02", date);
+                plantAppService.getCapacity("PL-02", date);
 
         assertEquals(30.0, capacity, 0.001);
     }
-    
+
 }
