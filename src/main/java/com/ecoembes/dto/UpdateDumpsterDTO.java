@@ -2,6 +2,8 @@ package com.ecoembes.dto;
 
 import java.time.LocalDate;
 
+import com.ecoembes.domain.FillLevel;
+
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -53,3 +55,4 @@ public class UpdateDumpsterDTO {
         this.fillLevel = fillLevel;
     }
 }
+

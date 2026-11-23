@@ -24,9 +24,8 @@ public class AuthController {
     public ResponseEntity<LoginResponseDTO> login(
             @Valid @RequestBody LoginRequestDTO request) {
 
-        LoginResponseDTO response = authService.login(request);
-
-        return ResponseEntity.ok(response);
+        String token = authService.login(request.getEmail(), request.getPassword());
+        return ResponseEntity.ok(new LoginResponseDTO(token));
     }
 
     // POST /logout

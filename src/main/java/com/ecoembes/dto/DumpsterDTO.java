@@ -51,3 +51,4 @@ public class DumpsterDTO {
         this.initialCapacity = initialCapacity;
     }
 }
+

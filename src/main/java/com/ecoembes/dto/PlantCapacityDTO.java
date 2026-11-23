@@ -42,3 +42,4 @@ public class PlantCapacityDTO {
         this.availableCapacityTons = availableCapacityTons;
     }
 }
+

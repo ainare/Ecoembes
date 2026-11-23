@@ -12,3 +12,4 @@ public class LoginResponseDTO {
         return token;
     }
 }
+

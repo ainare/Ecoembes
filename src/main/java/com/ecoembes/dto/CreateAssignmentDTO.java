@@ -52,3 +52,4 @@ public class CreateAssignmentDTO {
         this.dumpsterIds = dumpsterIds;
     }
 }
+
