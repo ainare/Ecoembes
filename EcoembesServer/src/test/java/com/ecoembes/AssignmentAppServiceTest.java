@@ -10,6 +10,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.ecoembes.dao.DumpsterReadingRepository;
+import com.ecoembes.dao.DumpsterRepository;
+import com.ecoembes.dao.PlantRepository;
 import com.ecoembes.domain.Assignment;
 import com.ecoembes.domain.Dumpster;
 import com.ecoembes.domain.DumpsterReading;
@@ -18,149 +21,139 @@ import com.ecoembes.domain.FillLevel;
 import com.ecoembes.service.AssignmentAppService;
 import com.ecoembes.service.DumpsterAppService;
 import com.ecoembes.service.PlantAppService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 
+@SpringBootTest(properties = { "spring.datasource.url=jdbc:h2:mem:ecoembes_test;DB_CLOSE_DELAY=-1",
+		"spring.jpa.hibernate.ddl-auto=create-drop" })
 class AssignmentAppServiceTest {
 
-    private final Employee employee = new Employee("EMP-001", "employee@example.test", "demo");
-    private DumpsterAppService dumpsterAppService;
-    private PlantAppService plantAppService;
-    private AssignmentAppService assignmentAppService;
-    private LocalDate date;
+	@Autowired
+	private DumpsterRepository dumpsterRepository;
 
-    @BeforeEach
-    void setUp() {
-        dumpsterAppService = new DumpsterAppService();
-        plantAppService = new PlantAppService();
-        assignmentAppService = new AssignmentAppService(dumpsterAppService, plantAppService);
-        date = LocalDate.now();
+	@Autowired
+	private DumpsterReadingRepository readingRepository;
+	@Autowired
+	private PlantRepository plantRepository;
+	private final Employee employee = new Employee("EMP-001", "employee@example.test", "demo");
+	private DumpsterAppService dumpsterAppService;
+	private PlantAppService plantAppService;
+	private AssignmentAppService assignmentAppService;
+	private LocalDate date;
 
-        createDumpster("D-101", 75);
-        createDumpster("D-102", 30);
-    }
+	@BeforeEach
+	void setUp() {
 
-    private void createDumpster(String id, int containers) {
-        dumpsterAppService.createDumpster(new Dumpster(id, "Calle Mayor 12", "48001", 100));
-        dumpsterAppService.updateDumpster(id, new DumpsterReading(date, containers, FillLevel.GREEN));
-    }
+		readingRepository.deleteAll();
+		dumpsterRepository.deleteAll();
+		plantRepository.deleteAll();
 
-    @Test
-    void testCreateAssignment() {
-        Assignment result = assignmentAppService.assignDumpsters(
-                "PL-01", date, List.of("D-101", "D-102"), employee
-        );
+		dumpsterAppService = new DumpsterAppService(dumpsterRepository, readingRepository);
+		plantAppService = new PlantAppService(plantRepository);
+		assignmentAppService = new AssignmentAppService(dumpsterAppService, plantAppService);
+		date = LocalDate.now();
 
-        assertEquals("PL-01", result.plant().getId());
-        assertEquals(2, result.totalDumpsters());
-        assertEquals(105, result.totalPackagingContainers());
-        assertEquals("EMP-001", result.employee().getEmployeeId());
-    }
+		createDumpster("D-101", 75);
+		createDumpster("D-102", 30);
+	}
 
-    @Test
-    void testPlantNotFound() {
-        ResponseStatusException error = assertThrows(
-                ResponseStatusException.class,
-                () -> assignmentAppService.assignDumpsters("PL-99", date, List.of("D-101"), employee)
-        );
-        assertEquals(404, error.getStatusCode().value());
-    }
+	private void createDumpster(String id, int containers) {
+		dumpsterAppService.createDumpster(new Dumpster(id, "Calle Mayor 12", "48001", 100));
+		dumpsterAppService.updateDumpster(id, new DumpsterReading(date, containers, FillLevel.GREEN));
+	}
 
-    @Test
-    void testDumpsterNotFound() {
-        ResponseStatusException error = assertThrows(
-                ResponseStatusException.class,
-                () -> assignmentAppService.assignDumpsters("PL-01", date, List.of("D-999"), employee)
-        );
-        assertEquals(404, error.getStatusCode().value());
-    }
+	@Test
+	void testCreateAssignment() {
+		Assignment result = assignmentAppService.assignDumpsters("PL-01", date, List.of("D-101", "D-102"), employee);
 
-    @Test
-    void testEmployeeNotAuthenticated() {
-        ResponseStatusException error = assertThrows(
-                ResponseStatusException.class,
-                () -> assignmentAppService.assignDumpsters("PL-01", date, List.of("D-101"), null)
-        );
-        assertEquals(401, error.getStatusCode().value());
-    }
+		assertEquals("PL-01", result.plant().getId());
+		assertEquals(2, result.totalDumpsters());
+		assertEquals(105, result.totalPackagingContainers());
+		assertEquals("EMP-001", result.employee().getEmployeeId());
+	}
 
-    @Test
-    void testRepeatedDumpster() {
-        ResponseStatusException error = assertThrows(
-                ResponseStatusException.class,
-                () -> assignmentAppService.assignDumpsters(
-                        "PL-01", date, List.of("D-101", " D-101 "), employee
-                )
-        );
-        assertEquals(400, error.getStatusCode().value());
-    }
+	@Test
+	void testPlantNotFound() {
+		ResponseStatusException error = assertThrows(ResponseStatusException.class,
+				() -> assignmentAppService.assignDumpsters("PL-99", date, List.of("D-101"), employee));
+		assertEquals(404, error.getStatusCode().value());
+	}
 
-    @Test
-    void testEmptyDumpsterList() {
-        ResponseStatusException error = assertThrows(
-                ResponseStatusException.class,
-                () -> assignmentAppService.assignDumpsters("PL-01", date, List.of(), employee)
-        );
-        assertEquals(400, error.getStatusCode().value());
-    }
+	@Test
+	void testDumpsterNotFound() {
+		ResponseStatusException error = assertThrows(ResponseStatusException.class,
+				() -> assignmentAppService.assignDumpsters("PL-01", date, List.of("D-999"), employee));
+		assertEquals(404, error.getStatusCode().value());
+	}
 
-    @Test
-    void testReadingNotFound() {
-        ResponseStatusException error = assertThrows(
-                ResponseStatusException.class,
-                () -> assignmentAppService.assignDumpsters(
-                        "PL-01", date.plusDays(1), List.of("D-101"), employee
-                )
-        );
-        assertEquals(404, error.getStatusCode().value());
-    }
+	@Test
+	void testEmployeeNotAuthenticated() {
+		ResponseStatusException error = assertThrows(ResponseStatusException.class,
+				() -> assignmentAppService.assignDumpsters("PL-01", date, List.of("D-101"), null));
+		assertEquals(401, error.getStatusCode().value());
+	}
 
-    @Test
-    void testAssignmentIdsAreUnique() {
-        Assignment first = assignmentAppService.assignDumpsters(
-                "PL-01", date, List.of("D-101"), employee
-        );
-        Assignment second = assignmentAppService.assignDumpsters(
-                "PL-01", date, List.of("D-102"), employee
-        );
+	@Test
+	void testRepeatedDumpster() {
+		ResponseStatusException error = assertThrows(ResponseStatusException.class,
+				() -> assignmentAppService.assignDumpsters("PL-01", date, List.of("D-101", " D-101 "), employee));
+		assertEquals(400, error.getStatusCode().value());
+	}
 
-        assertEquals("AS-001", first.assignmentId());
-        assertEquals("AS-002", second.assignmentId());
-    }
+	@Test
+	void testEmptyDumpsterList() {
+		ResponseStatusException error = assertThrows(ResponseStatusException.class,
+				() -> assignmentAppService.assignDumpsters("PL-01", date, List.of(), employee));
+		assertEquals(400, error.getStatusCode().value());
+	}
 
-    @Test
-    void testAssignmentReservesCapacity() {
-        double capacityBefore = plantAppService.getCapacity("PL-01", date);
+	@Test
+	void testReadingNotFound() {
+		ResponseStatusException error = assertThrows(ResponseStatusException.class,
+				() -> assignmentAppService.assignDumpsters("PL-01", date.plusDays(1), List.of("D-101"), employee));
+		assertEquals(404, error.getStatusCode().value());
+	}
 
-        assignmentAppService.assignDumpsters("PL-01", date, List.of("D-101"), employee);
+	@Test
+	void testAssignmentIdsAreUnique() {
+		Assignment first = assignmentAppService.assignDumpsters("PL-01", date, List.of("D-101"), employee);
+		Assignment second = assignmentAppService.assignDumpsters("PL-01", date, List.of("D-102"), employee);
 
-        double capacityAfter = plantAppService.getCapacity("PL-01", date);
+		assertEquals("AS-001", first.assignmentId());
+		assertEquals("AS-002", second.assignmentId());
+	}
 
-        // 75 envases x 0.05 kg / 1000 = 0.00375 toneladas.
-        assertEquals(capacityBefore - 0.00375, capacityAfter, 0.000001);
-    }
+	@Test
+	void testAssignmentReservesCapacity() {
+		double capacityBefore = plantAppService.getCapacity("PL-01", date);
 
-    @Test
-    void testInsufficientPlantCapacity() {
-        dumpsterAppService.createDumpster(new Dumpster("D-103", "Calle Mayor 12", "48001", 600000));
-        dumpsterAppService.updateDumpster("D-103", new DumpsterReading(date, 510001, FillLevel.GREEN));
+		assignmentAppService.assignDumpsters("PL-01", date, List.of("D-101"), employee);
 
-        ResponseStatusException error = assertThrows(
-                ResponseStatusException.class,
-                () -> assignmentAppService.assignDumpsters("PL-01", date, List.of("D-103"), employee)
-        );
+		double capacityAfter = plantAppService.getCapacity("PL-01", date);
 
-        assertEquals(409, error.getStatusCode().value());
-        assertEquals(25.5, plantAppService.getCapacity("PL-01", date), 0.000001);
-    }
+		// 75 envases x 0.05 kg / 1000 = 0.00375 toneladas.
+		assertEquals(capacityBefore - 0.00375, capacityAfter, 0.000001);
+	}
 
-    @Test
-    void testDumpsterCannotBeAssignedTwice() {
-        assignmentAppService.assignDumpsters("PL-01", date, List.of("D-101"), employee);
+	@Test
+	void testInsufficientPlantCapacity() {
+		dumpsterAppService.createDumpster(new Dumpster("D-103", "Calle Mayor 12", "48001", 600000));
+		dumpsterAppService.updateDumpster("D-103", new DumpsterReading(date, 510001, FillLevel.GREEN));
 
-        ResponseStatusException error = assertThrows(
-                ResponseStatusException.class,
-                () -> assignmentAppService.assignDumpsters("PL-02", date, List.of("D-101"), employee)
-        );
+		ResponseStatusException error = assertThrows(ResponseStatusException.class,
+				() -> assignmentAppService.assignDumpsters("PL-01", date, List.of("D-103"), employee));
 
-        assertEquals(409, error.getStatusCode().value());
-    }
+		assertEquals(409, error.getStatusCode().value());
+		assertEquals(25.5, plantAppService.getCapacity("PL-01", date), 0.000001);
+	}
+
+	@Test
+	void testDumpsterCannotBeAssignedTwice() {
+		assignmentAppService.assignDumpsters("PL-01", date, List.of("D-101"), employee);
+
+		ResponseStatusException error = assertThrows(ResponseStatusException.class,
+				() -> assignmentAppService.assignDumpsters("PL-02", date, List.of("D-101"), employee));
+
+		assertEquals(409, error.getStatusCode().value());
+	}
 }

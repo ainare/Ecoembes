@@ -6,46 +6,60 @@ import java.util.NavigableMap;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentSkipListMap;
 
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
+
+@Entity
+@Table(name = "dumpsters")
 public class Dumpster {
 
-    private final String id;
-    private final String address;
-    private final String postalCode;
-    private final Integer initialCapacity;
-    private final NavigableMap<LocalDate, DumpsterReading> readings = new ConcurrentSkipListMap<>();
+	@Id
+	private String id;
 
-    public Dumpster(String id, String address, String postalCode, Integer initialCapacity) {
-        this.id = id;
-        this.address = address;
-        this.postalCode = postalCode;
-        this.initialCapacity = initialCapacity;
-    }
+	private String address;
+	private String postalCode;
+	private Integer initialCapacity;
 
-    public String id() {
-        return id;
-    }
+	@Transient
+	private NavigableMap<LocalDate, DumpsterReading> readings = new ConcurrentSkipListMap<>();
 
-    public String address() {
-        return address;
-    }
+	protected Dumpster() {
+	}
 
-    public String postalCode() {
-        return postalCode;
-    }
+	public Dumpster(String id, String address, String postalCode, Integer initialCapacity) {
+		this.id = id;
+		this.address = address;
+		this.postalCode = postalCode;
+		this.initialCapacity = initialCapacity;
+	}
 
-    public Integer initialCapacity() {
-        return initialCapacity;
-    }
+	public String id() {
+		return id;
+	}
 
-    public void saveReading(DumpsterReading reading) {
-        readings.put(reading.date(), reading);
-    }
+	public String address() {
+		return address;
+	}
 
-    public Optional<DumpsterReading> findReading(LocalDate date) {
-        return Optional.ofNullable(readings.get(date));
-    }
+	public String postalCode() {
+		return postalCode;
+	}
 
-    public List<DumpsterReading> findReadings(LocalDate startDate, LocalDate endDate) {
-        return List.copyOf(readings.subMap(startDate, true, endDate, true).values());
-    }
+	public Integer initialCapacity() {
+		return initialCapacity;
+	}
+
+	public void saveReading(DumpsterReading reading) {
+		readings.put(reading.date(), reading);
+	}
+
+	public Optional<DumpsterReading> findReading(LocalDate date) {
+		return Optional.ofNullable(readings.get(date));
+	}
+
+	public List<DumpsterReading> findReadings(LocalDate startDate, LocalDate endDate) {
+		return List.copyOf(readings.subMap(startDate, true, endDate, true).values());
+	}
 }

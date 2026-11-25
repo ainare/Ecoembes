@@ -35,76 +35,64 @@ import jakarta.validation.Valid;
 @SecurityRequirement(name = "bearerAuth")
 public class DumpsterController {
 
-    private final DumpsterAppService dumpsterAppService;
+	private final DumpsterAppService dumpsterAppService;
 
-    public DumpsterController(DumpsterAppService dumpsterAppService) {
-        this.dumpsterAppService = dumpsterAppService;
-    }
+	public DumpsterController(DumpsterAppService dumpsterAppService) {
+		this.dumpsterAppService = dumpsterAppService;
+	}
 
-    @ApiResponse(responseCode = "201", description = "Dumpster created")
-    @ApiResponse(responseCode = "400", description = "Invalid dumpster data")
-    @ApiResponse(responseCode = "401", description = "Invalid or missing token")
-    @ApiResponse(responseCode = "409", description = "Dumpster ID already exists")
-    @PostMapping
-    public ResponseEntity<DumpsterDTO> createDumpster(@Valid @RequestBody CreateDumpsterDTO request) {
-        Dumpster created = dumpsterAppService.createDumpster(new Dumpster(
-                request.getId(), request.getAddress(), request.getPostalCode(), request.getInitialCapacity()
-        ));
+	@ApiResponse(responseCode = "201", description = "Dumpster created")
+	@ApiResponse(responseCode = "400", description = "Invalid dumpster data")
+	@ApiResponse(responseCode = "401", description = "Invalid or missing token")
+	@ApiResponse(responseCode = "409", description = "Dumpster ID already exists")
+	@PostMapping
+	public ResponseEntity<DumpsterDTO> createDumpster(@Valid @RequestBody CreateDumpsterDTO request) {
+		Dumpster created = dumpsterAppService.createDumpster(new Dumpster(request.getId(), request.getAddress(),
+				request.getPostalCode(), request.getInitialCapacity()));
 
-        DumpsterDTO response = new DumpsterDTO(
-                created.id(), created.address(), created.postalCode(), created.initialCapacity()
-        );
+		DumpsterDTO response = new DumpsterDTO(created.id(), created.address(), created.postalCode(),
+				created.initialCapacity());
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
+		return ResponseEntity.status(HttpStatus.CREATED).body(response);
+	}
 
-    @ApiResponse(responseCode = "200", description = "Reading saved")
-    @ApiResponse(responseCode = "400", description = "Invalid reading data")
-    @ApiResponse(responseCode = "401", description = "Invalid or missing token")
-    @ApiResponse(responseCode = "404", description = "Dumpster not found")
-    @PutMapping("/{id}")
-    public ResponseEntity<UpdateDumpsterResponseDTO> updateDumpster(
-            @PathVariable("id") String id, @Valid @RequestBody UpdateDumpsterDTO request) {
-        DumpsterReading saved = dumpsterAppService.updateDumpster(id, new DumpsterReading(
-                request.getDate(), request.getEstimatedContainers(), request.getFillLevel()
-        ));
+	@ApiResponse(responseCode = "200", description = "Reading saved")
+	@ApiResponse(responseCode = "400", description = "Invalid reading data")
+	@ApiResponse(responseCode = "401", description = "Invalid or missing token")
+	@ApiResponse(responseCode = "404", description = "Dumpster not found")
+	@PutMapping("/{id}")
+	public ResponseEntity<UpdateDumpsterResponseDTO> updateDumpster(@PathVariable("id") String id,
+			@Valid @RequestBody UpdateDumpsterDTO request) {
+		DumpsterReading saved = dumpsterAppService.updateDumpster(id,
+				new DumpsterReading(request.getDate(), request.getEstimatedContainers(), request.getFillLevel()));
 
-        return ResponseEntity.ok(new UpdateDumpsterResponseDTO(
-                id.trim(), saved.date(), saved.estimatedContainers(), saved.fillLevel()
-        ));
-    }
+		return ResponseEntity.ok(
+				new UpdateDumpsterResponseDTO(id.trim(), saved.date(), saved.estimatedContainers(), saved.fillLevel()));
+	}
 
-    @GetMapping("/{id}/usage")
-    public ResponseEntity<DumpsterUsageDTO> getDumpsterUsage(
-            @PathVariable("id") String id,
-            @RequestParam("startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        List<DumpsterReadingDTO> readings = dumpsterAppService.getUsage(id, startDate, endDate).stream()
-                .map(reading -> new DumpsterReadingDTO(
-                        reading.date(), reading.estimatedContainers(), reading.fillLevel()
-                ))
-                .toList();
+	@GetMapping("/{id}/usage")
+	public ResponseEntity<DumpsterUsageDTO> getDumpsterUsage(@PathVariable("id") String id,
+			@RequestParam("startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+			@RequestParam("endDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+		List<DumpsterReadingDTO> readings = dumpsterAppService.getUsage(id, startDate, endDate).stream().map(
+				reading -> new DumpsterReadingDTO(reading.date(), reading.estimatedContainers(), reading.fillLevel()))
+				.toList();
 
-        return ResponseEntity.ok(new DumpsterUsageDTO(id.trim(), startDate, endDate, readings));
-    }
+		return ResponseEntity.ok(new DumpsterUsageDTO(id.trim(), startDate, endDate, readings));
+	}
 
-    @GetMapping("/status")
-    public ResponseEntity<DumpsterStatusDTO> getDumpstersStatus(
-            @RequestParam("postalCode") String postalCode,
-            @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        List<DumpsterStatusDTO.DumpsterInfoDTO> dumpsters = dumpsterAppService.getStatus(postalCode, date)
-                .stream()
-                .map(dumpster -> toDumpsterInfoDTO(dumpster, date))
-                .toList();
+	@GetMapping("/status")
+	public ResponseEntity<DumpsterStatusDTO> getDumpstersStatus(@RequestParam("postalCode") String postalCode,
+			@RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+		List<DumpsterStatusDTO.DumpsterInfoDTO> dumpsters = dumpsterAppService.getStatus(postalCode, date).stream()
+				.map(dumpster -> toDumpsterInfoDTO(dumpster, date)).toList();
 
-        return ResponseEntity.ok(new DumpsterStatusDTO(postalCode.trim(), date, dumpsters));
-    }
+		return ResponseEntity.ok(new DumpsterStatusDTO(postalCode.trim(), date, dumpsters));
+	}
 
-    private DumpsterStatusDTO.DumpsterInfoDTO toDumpsterInfoDTO(Dumpster dumpster, LocalDate date) {
-        DumpsterReading reading = dumpster.findReading(date).orElseThrow();
-
-        return new DumpsterStatusDTO.DumpsterInfoDTO(
-                dumpster.id(), dumpster.address(), reading.estimatedContainers(), reading.fillLevel()
-        );
-    }
+	private DumpsterStatusDTO.DumpsterInfoDTO toDumpsterInfoDTO(Dumpster dumpster, LocalDate date) {
+		DumpsterReading reading = dumpsterAppService.getReading(dumpster.id(), date);
+		return new DumpsterStatusDTO.DumpsterInfoDTO(dumpster.id(), dumpster.address(), reading.estimatedContainers(),
+				reading.fillLevel());
+	}
 }
