@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -30,45 +31,46 @@ import jakarta.validation.Valid;
 @RequestMapping("/assignments")
 public class AssignmentController {
 
-    private final AssignmentAppService assignmentAppService;
+	private final AssignmentAppService assignmentAppService;
 
-    public AssignmentController(AssignmentAppService assignmentAppService) {
-        this.assignmentAppService = assignmentAppService;
-    }
+	public AssignmentController(AssignmentAppService assignmentAppService) {
+		this.assignmentAppService = assignmentAppService;
+	}
 
-    @Operation(
-            summary = "Crear una asignación",
-            description = "Asigna varios contenedores a una planta de reciclaje para una fecha determinada."
-    )
-    @ApiResponse(responseCode = "201", description = "Asignación creada correctamente")
-    @ApiResponse(responseCode = "400", description = "Datos de asignación incorrectos")
-    @ApiResponse(responseCode = "401", description = "Empleado no autenticado")
-    @ApiResponse(responseCode = "404", description = "Planta, contenedor o lectura no encontrada")
-    @ApiResponse(responseCode = "409", description = "Capacidad insuficiente o contenedor ya asignado")
-    @ApiResponse(responseCode = "500", description = "Internal error during assignment")
-    @PostMapping
-    public ResponseEntity<AssignmentDTO> createAssignment(
-            @RequestAttribute(TokenAuthenticationFilter.AUTHENTICATED_EMPLOYEE_ATTRIBUTE)
-            Employee employee,
-            @Valid @RequestBody CreateAssignmentDTO request) {
-        Assignment assignment = assignmentAppService.assignDumpsters(
-                request.getPlantId(), request.getDate(), request.getDumpsterIds(), employee
-        );
+	@Operation(summary = "Crear una asignación", description = "Asigna varios contenedores a una planta de reciclaje para una fecha determinada.")
+	@ApiResponse(responseCode = "201", description = "Asignación creada correctamente")
+	@ApiResponse(responseCode = "400", description = "Datos de asignación incorrectos")
+	@ApiResponse(responseCode = "401", description = "Empleado no autenticado")
+	@ApiResponse(responseCode = "404", description = "Planta, contenedor o lectura no encontrada")
+	@ApiResponse(responseCode = "409", description = "Capacidad insuficiente o contenedor ya asignado")
+	@ApiResponse(responseCode = "500", description = "Internal error during assignment")
+	@PostMapping
+	public ResponseEntity<AssignmentDTO> createAssignment(
+			@RequestAttribute(TokenAuthenticationFilter.AUTHENTICATED_EMPLOYEE_ATTRIBUTE) Employee employee,
+			@Valid @RequestBody CreateAssignmentDTO request) {
+		Assignment assignment = assignmentAppService.assignDumpsters(request.getPlantId(), request.getDate(),
+				request.getDumpsterIds(), employee);
 
-        List<String> dumpsterIds = assignment.dumpsters().stream()
-                .map(Dumpster::id)
-                .toList();
+		List<String> dumpsterIds = assignment.dumpsters().stream().map(Dumpster::id).toList();
 
-        AssignmentDTO response = new AssignmentDTO(
-                assignment.assignmentId(),
-                assignment.plant().getId(),
-                assignment.date(),
-                dumpsterIds,
-                assignment.totalDumpsters(),
-                assignment.totalPackagingContainers(),
-                assignment.employee().getEmployeeId()
-        );
+		AssignmentDTO response = new AssignmentDTO(assignment.assignmentId(), assignment.plant().getId(),
+				assignment.date(), dumpsterIds, assignment.totalDumpsters(), assignment.totalPackagingContainers(),
+				assignment.employee().getEmployeeId());
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
+		return ResponseEntity.status(HttpStatus.CREATED).body(response);
+	}
+
+	@Operation(summary = "Confirmar una asignación", description = "Cambia el estado de una asignación de PENDING a CONFIRMED.")
+	@ApiResponse(responseCode = "204", description = "Asignación confirmada")
+	@ApiResponse(responseCode = "401", description = "Empleado no autenticado")
+	@ApiResponse(responseCode = "404", description = "Asignación no encontrada")
+	@ApiResponse(responseCode = "409", description = "Asignación ya confirmada")
+	@PostMapping("/{id}/confirm")
+	public ResponseEntity<Void> confirmAssignment(@PathVariable("id") String id) {
+
+		assignmentAppService.confirmAssignment(id);
+
+		return ResponseEntity.noContent().build();
+	}
+
 }

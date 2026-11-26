@@ -1,35 +1,58 @@
-
 package com.ecoembes.domain;
 
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.MapKeyColumn;
+import jakarta.persistence.Table;
+
+@Entity
+@Table(name = "plants")
 public class Plant {
 
-    private final String id;
-    private final String name;
-    private final Map<LocalDate, Double> availableCapacity;
+	@Id
+	private String id;
 
-    public Plant(String id, String name,
-                 Map<LocalDate, Double> availableCapacity) {
+	private String name;
 
-        this.id = id;
-        this.name = name;
-        this.availableCapacity = new HashMap<>(availableCapacity);
-    }
+	@ElementCollection(fetch = FetchType.EAGER)
+	@CollectionTable(name = "plant_capacities", joinColumns = @JoinColumn(name = "plant_id"))
+	@MapKeyColumn(name = "capacity_date")
+	@Column(name = "available_capacity")
+	private Map<LocalDate, Double> availableCapacity = new HashMap<>();
 
-    public String getId() {
-        return id;
-    }
+	protected Plant() {
+	}
 
-    public String getName() {
-        return name;
-    }
+	public Plant(String id, String name, Map<LocalDate, Double> availableCapacity) {
 
-    public Double getAvailableCapacity(LocalDate date) {
-        return availableCapacity.get(date);
-    }
+		this.id = id;
+		this.name = name;
+		this.availableCapacity = new HashMap<>(availableCapacity);
+	}
+
+	public String getId() {
+		return id;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public Double getAvailableCapacity(LocalDate date) {
+		return availableCapacity.get(date);
+	}
+
+	public void setAvailableCapacity(LocalDate date, Double capacity) {
+		availableCapacity.put(date, capacity);
+	}
+
 }
-
-
