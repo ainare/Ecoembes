@@ -34,6 +34,9 @@ public class Assignment {
 
 	private int totalPackagingContainers;
 
+	@Enumerated(EnumType.STRING)
+	private AssignmentStatus status = AssignmentStatus.PENDING;
+
 	@OneToMany(mappedBy = "assignment", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
 	private List<AssignmentItem> items = new ArrayList<>();
 
@@ -80,5 +83,13 @@ public class Assignment {
 
 	public int totalDumpsters() {
 		return items.size();
+	}
+
+	public AssignmentStatus getStatus() {
+		return status;
+	}
+
+	public void setStatus(AssignmentStatus status) {
+		this.status = status;
 	}
 }

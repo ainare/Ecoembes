@@ -2,22 +2,23 @@ package com.ecoembes.service;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.ecoembes.dao.AssignmentRepository;
 import com.ecoembes.domain.Assignment;
+import com.ecoembes.domain.AssignmentStatus;
 import com.ecoembes.domain.Dumpster;
 import com.ecoembes.domain.DumpsterReading;
 import com.ecoembes.domain.Employee;
 import com.ecoembes.domain.Plant;
+
+import jakarta.transaction.Transactional;
 
 @Service
 public class AssignmentAppService {
@@ -28,15 +29,17 @@ public class AssignmentAppService {
 
 	private final DumpsterAppService dumpsterAppService;
 	private final PlantAppService plantAppService;
-	private final Map<String, Assignment> assignments = new HashMap<>();
-	private final Map<LocalDate, Set<String>> assignedDumpstersByDate = new HashMap<>();
-	private int nextAssignmentId = 1;
+	private final AssignmentRepository assignmentRepository;
 
-	public AssignmentAppService(DumpsterAppService dumpsterAppService, PlantAppService plantAppService) {
+	public AssignmentAppService(DumpsterAppService dumpsterAppService, PlantAppService plantAppService,
+			AssignmentRepository assignmentRepository) {
+
 		this.dumpsterAppService = dumpsterAppService;
 		this.plantAppService = plantAppService;
+		this.assignmentRepository = assignmentRepository;
 	}
 
+	@Transactional
 	public synchronized Assignment assignDumpsters(String plantId, LocalDate date, List<String> dumpsterIds,
 			Employee employee) {
 		if (plantId == null || plantId.isBlank() || date == null || dumpsterIds == null || dumpsterIds.isEmpty()) {
@@ -58,12 +61,11 @@ public class AssignmentAppService {
 			}
 		}
 
-		Set<String> previouslyAssigned = assignedDumpstersByDate.getOrDefault(date, Set.of());
 		List<Dumpster> dumpsters = new ArrayList<>();
 		int totalPackagingContainers = 0;
 
 		for (String dumpsterId : uniqueIds) {
-			if (previouslyAssigned.contains(dumpsterId)) {
+			if (assignmentRepository.existsByDateAndItems_Dumpster_Id(date, dumpsterId)) {
 				throw new ResponseStatusException(HttpStatus.CONFLICT,
 						"Dumpster already assigned for this date: " + dumpsterId);
 			}
@@ -90,16 +92,40 @@ public class AssignmentAppService {
 		double requiredTons = totalPackagingContainers * KG_PER_PACKAGE / KG_PER_TON;
 		plantAppService.reserveCapacity(plant.getId(), date, requiredTons);
 
-		String assignmentId = String.format("AS-%03d", nextAssignmentId++);
+		String assignmentId = generateAssignmentId();
 		Assignment assignment = new Assignment(assignmentId, plant, employee, date, dumpsters,
 				totalPackagingContainers);
 
-		assignments.put(assignmentId, assignment);
-		assignedDumpstersByDate.computeIfAbsent(date, key -> new HashSet<>()).addAll(uniqueIds);
+		assignmentRepository.save(assignment);
 
 		System.out.println("Notification to plant " + plant.getId() + ": " + assignment.totalDumpsters()
 				+ " dumpsters and " + assignment.totalPackagingContainers() + " packaging containers.");
 
 		return assignment;
+	}
+
+	@Transactional
+	public Assignment confirmAssignment(String assignmentId) {
+
+		Assignment assignment = assignmentRepository.findById(assignmentId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Assignment not found"));
+
+		if (assignment.getStatus() == AssignmentStatus.CONFIRMED) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "Assignment already confirmed");
+		}
+
+		assignment.setStatus(AssignmentStatus.CONFIRMED);
+
+		return assignmentRepository.save(assignment);
+	}
+
+	private String generateAssignmentId() {
+		int nextId = 1;
+
+		while (assignmentRepository.existsById(String.format("AS-%03d", nextId))) {
+			nextId++;
+		}
+
+		return String.format("AS-%03d", nextId);
 	}
 }

@@ -10,6 +10,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.ecoembes.dao.AssignmentItemRepository;
+import com.ecoembes.dao.AssignmentRepository;
 import com.ecoembes.dao.DumpsterReadingRepository;
 import com.ecoembes.dao.DumpsterRepository;
 import com.ecoembes.dao.PlantRepository;
@@ -35,6 +37,10 @@ class AssignmentAppServiceTest {
 	private DumpsterReadingRepository readingRepository;
 	@Autowired
 	private PlantRepository plantRepository;
+	@Autowired
+	private AssignmentRepository assignmentRepository;
+	@Autowired
+	private AssignmentItemRepository assignmentItemRepository;
 	private final Employee employee = new Employee("EMP-001", "employee@example.test", "demo");
 	private DumpsterAppService dumpsterAppService;
 	private PlantAppService plantAppService;
@@ -44,13 +50,15 @@ class AssignmentAppServiceTest {
 	@BeforeEach
 	void setUp() {
 
+		assignmentItemRepository.deleteAllInBatch();
+		assignmentRepository.deleteAllInBatch();
 		readingRepository.deleteAll();
 		dumpsterRepository.deleteAll();
 		plantRepository.deleteAll();
 
 		dumpsterAppService = new DumpsterAppService(dumpsterRepository, readingRepository);
 		plantAppService = new PlantAppService(plantRepository);
-		assignmentAppService = new AssignmentAppService(dumpsterAppService, plantAppService);
+		assignmentAppService = new AssignmentAppService(dumpsterAppService, plantAppService, assignmentRepository);
 		date = LocalDate.now();
 
 		createDumpster("D-101", 75);

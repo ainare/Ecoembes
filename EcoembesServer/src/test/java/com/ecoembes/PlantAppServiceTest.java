@@ -16,7 +16,7 @@ import com.ecoembes.dto.PlantCapacityDTO;
 import com.ecoembes.facade.PlantController;
 import com.ecoembes.service.PlantAppService;
 
-@SpringBootTest(properties = { "spring.datasource.url=jdbc:h2:mem:ecoembes_test;DB_CLOSE_DELAY=-1",
+@SpringBootTest(properties = { "spring.datasource.url=jdbc:h2:mem:ecoembes_plants_test;DB_CLOSE_DELAY=-1",
 		"spring.jpa.hibernate.ddl-auto=create-drop" })
 class PlantAppServiceTest {
 
