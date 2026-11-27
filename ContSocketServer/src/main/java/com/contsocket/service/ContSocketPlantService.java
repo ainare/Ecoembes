@@ -11,14 +11,14 @@ import com.contsocket.model.PlantCapacity;
 
 public class ContSocketPlantService {
 
-    private static final BigDecimal DEFAULT_DAILY_CAPACITY = new BigDecimal("100.00");
+    private static final BigDecimal DEFAULT_DAILY_CAPACITY = new BigDecimal("30.00000");
 
     private final Map<LocalDate, BigDecimal> capacityByDate = new HashMap<>();
     private final Map<String, AssignmentReceipt> processedAssignments = new HashMap<>();
 
     public ContSocketPlantService() {
         LocalDate today = LocalDate.now();
-        for (int i = 0; i < 7; i++) {
+        for (int i = 0; i < 10; i++) {
             capacityByDate.put(today.plusDays(i), DEFAULT_DAILY_CAPACITY);
         }
     }
