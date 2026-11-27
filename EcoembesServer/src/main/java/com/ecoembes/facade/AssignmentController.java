@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.ecoembes.config.TokenAuthenticationFilter;
 import com.ecoembes.domain.Assignment;
-import com.ecoembes.domain.Dumpster;
 import com.ecoembes.domain.Employee;
 import com.ecoembes.dto.AssignmentDTO;
 import com.ecoembes.dto.CreateAssignmentDTO;
@@ -51,11 +50,19 @@ public class AssignmentController {
 		Assignment assignment = assignmentAppService.assignDumpsters(request.getPlantId(), request.getDate(),
 				request.getDumpsterIds(), employee);
 
-		List<String> dumpsterIds = assignment.dumpsters().stream().map(Dumpster::id).toList();
+		List<String> dumpsterIds = request.getDumpsterIds().stream()
+		        .map(String::trim)
+		        .toList();
 
-		AssignmentDTO response = new AssignmentDTO(assignment.assignmentId(), assignment.plant().getId(),
-				assignment.date(), dumpsterIds, assignment.totalDumpsters(), assignment.totalPackagingContainers(),
-				assignment.employee().getEmployeeId());
+		AssignmentDTO response = new AssignmentDTO(
+		        assignment.assignmentId(),
+		        request.getPlantId(),
+		        assignment.date(),
+		        dumpsterIds,
+		        assignment.totalDumpsters(),
+		        assignment.totalPackagingContainers(),
+		        employee.getEmployeeId()
+		);
 
 		return ResponseEntity.status(HttpStatus.CREATED).body(response);
 	}
