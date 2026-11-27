@@ -9,16 +9,15 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
 import com.ecoembes.dto.PlantCapacityDTO;
 import com.ecoembes.service.PlantAppService;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import com.ecoembes.domain.PlantCapacity;
 
 @SecurityScheme(name = "bearerAuth", type = SecuritySchemeType.HTTP, scheme = "bearer")
 @SecurityRequirement(name = "bearerAuth")
@@ -45,7 +44,11 @@ public class PlantController {
     public ResponseEntity<PlantCapacityDTO> getCapacity(
             @PathVariable("id") String id,
             @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        Double capacity = plantAppService.getCapacity(id, date);
-        return ResponseEntity.ok(new PlantCapacityDTO(id, date, capacity));
+    	PlantCapacity capacity = plantAppService.checkCapacity(id, date);
+
+    	return ResponseEntity.ok(new PlantCapacityDTO(id, capacity.date(),
+    	                capacity.availableCapacityTons().doubleValue()
+    	        )
+    	);
     }
 }
