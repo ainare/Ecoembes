@@ -7,6 +7,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.NoSuchElementException;
 
 import com.contsocket.model.AssignmentReceipt;
 import com.contsocket.model.PlantCapacity;
@@ -52,7 +53,7 @@ public class ClientHandler implements Runnable {
             SocketRequest request = objectMapper.readValue(requestLine, SocketRequest.class);
 
             if (request.action() == null) {
-                return SocketResponse.error("Falta el campo 'action' en la petición");
+                return SocketResponse.error("INVALID_REQUEST");
             }
 
             return switch (request.action().toUpperCase()) {
@@ -64,13 +65,13 @@ public class ClientHandler implements Runnable {
                     AssignmentReceipt receipt = plantService.registerAssignment(request.notice());
                     yield SocketResponse.okReceipt(receipt);
                 }
-                default -> SocketResponse.error("Acción no soportada: " + request.action());
+                default -> SocketResponse.error("INVALID_REQUEST");
             };
 
-        } catch (IllegalArgumentException e) {
+        } catch (NoSuchElementException | IllegalStateException | IllegalArgumentException e) {
             return SocketResponse.error(e.getMessage());
         } catch (Exception e) {
-            return SocketResponse.error("Error procesando JSON: " + e.getMessage());
+            return SocketResponse.error("INVALID_REQUEST");
         }
     }
 }
